@@ -1,0 +1,63 @@
+---
+title: "Activity Monitoring"
+author: "godggi"
+date: "2018-1-8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##read file and calculate mean and median
+
+```{r echo = TRUE}
+library(data.table)
+library(timeDate)
+library(tidyverse)
+library(lattice)
+rda<-read.csv("./activity.csv")
+rdaags<- aggregate(steps ~ interval, data = rda, sum)
+rdamean<-mean(rdaags$steps)
+rdamean
+rdamedian<-median(rdaags$steps)
+rdamedian
+```
+
+##What is mean total number of steps taken per day?
+
+```{r , echo=FALSE}
+
+rda1=rda%>%group_by(interval)%>%summarise(steps=mean(steps,na.rm = TRUE))
+rda$date<-as.POSIXct(rda$date)
+rdaagm<- aggregate(steps ~ interval, data = rda, mean)
+plot(rdaagm$interval,rdaagm$steps,type = "l")
+
+rdaMAX<-rdaags[which.max(rdaags[,2]),2]
+rdaMAX
+sum(is.na(rda))
+```
+
+##Imputing missing values
+
+```{r, echo = TRUE}
+rdasum<-tapply(rda$steps, INDEX=rda$date, sum)
+rdaNna <- mutate(rda, new_steps = ifelse(is.na(steps),rda1$steps[rda$interval %in% rda1$interval], steps))
+rdaNsum<-tapply(rdaNna$new_steps, INDEX=rdaNna$date, sum)
+hist(rdasum)
+hist(rdaNsum,add=T)
+rdaNags<- aggregate(steps ~ interval, data = rdaNna, sum)
+rdaNmean<-mean(rdaNags$steps)
+rdaNmean
+rdaNmedian<-median(rdaNags$steps)
+rdaNmedian
+```
+##Are there differences in activity patterns between weekdays and weekends?
+
+```{r, echo = TRUE}
+week_data<-mutate(rdaNna,weekdays=isWeekday(date))
+week_dataAg<-aggregate(new_steps ~ interval+weekdays, data = week_data, sum)
+week_dataAgN<-mutate(week_dataAg,new_weekdays=ifelse(weekdays,"weekday","weekend"))
+xyplot(new_steps ~ interval | new_weekdays, data = week_dataAgN, type="l",layout = c(1, 2))
+```
+
